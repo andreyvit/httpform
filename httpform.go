@@ -150,6 +150,21 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 		}
 	}
 
+	for _, fm := range sm.UnnamedFields {
+		var v any
+		switch fm.Source {
+		case requestSrc:
+			v = r
+		case urlSrc:
+			v = r.URL
+		case queryValuesSrc:
+			v = r.URL.Query()
+		default:
+			continue
+		}
+		setFieldVal(destVal, fm, reflect.ValueOf(v))
+	}
+
 	return nil
 }
 

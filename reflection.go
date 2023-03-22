@@ -62,10 +62,13 @@ func setField(structVal reflect.Value, fm *fieldMeta, rawValue string) error {
 	if err != nil {
 		return fmt.Errorf("invalid %s: %w", fm.name, err)
 	}
-
-	fieldVal := structVal.Field(fm.fieldIdx)
-	fieldVal.Set(value)
+	setFieldVal(structVal, fm, value)
 	return nil
+}
+
+func setFieldVal(structVal reflect.Value, fm *fieldMeta, val reflect.Value) {
+	fieldVal := structVal.Field(fm.fieldIdx)
+	fieldVal.Set(val)
 }
 
 func (conf *Configuration) lookupStruct(structTyp reflect.Type) *structMeta {
