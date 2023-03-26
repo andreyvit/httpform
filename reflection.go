@@ -156,6 +156,16 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 					panic(fmt.Errorf(`field %v.%s has conflicting modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
 				}
 				src = cookieSrc
+			case "method":
+				if src != noSrc {
+					panic(fmt.Errorf(`field %v.%s has conflicting modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
+				}
+				src = methodSrc
+			case "issave":
+				if src != noSrc {
+					panic(fmt.Errorf(`field %v.%s has conflicting modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
+				}
+				src = isSaveSrc
 			default:
 				panic(fmt.Errorf(`field %v.%s has unknown modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
 			}

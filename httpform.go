@@ -159,6 +159,10 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 			v = r.URL
 		case queryValuesSrc:
 			v = r.URL.Query()
+		case methodSrc:
+			v = r.Method
+		case isSaveSrc:
+			v = (r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch)
 		default:
 			continue
 		}
@@ -232,6 +236,8 @@ const (
 	requestSrc // sources here and below are unnamed
 	urlSrc
 	queryValuesSrc
+	methodSrc
+	isSaveSrc
 )
 
 var _sources = []string{"none", "path", "form", "cookie", "request", "url", "query values"}
