@@ -125,7 +125,11 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 		case pathSrc:
 			v := pp.Get(fm.name)
 			if v == "" {
-				panic(fmt.Errorf("httpform: missing path parameter %q, got: %s", fm.name, strings.Join(pp.Keys(), ", ")))
+				if fm.Optional {
+					continue
+				}
+				paramKeys := pp.Keys()
+				panic(fmt.Errorf("httpform: missing path parameter %q (got %d path params: %s)", fm.name, len(paramKeys), strings.Join(paramKeys, ", ")))
 			}
 			err := setField(destVal, fm, v)
 			if err != nil {

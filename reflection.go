@@ -30,6 +30,7 @@ type fieldMeta struct {
 	Parse     ParserFunc
 	Stringify StringerFunc
 	Source    source
+	Optional  bool
 }
 
 func getVal(structVal reflect.Value, fm *fieldMeta) reflect.Value {
@@ -133,7 +134,8 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 
 	formTag, formPresent := field.Tag.Lookup("form")
 	var (
-		formName string
+		formName   string
+		isOptional bool
 	)
 	if formPresent {
 		comps := strings.Split(formTag, ",")
@@ -166,6 +168,8 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 					panic(fmt.Errorf(`field %v.%s has conflicting modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
 				}
 				src = isSaveSrc
+			case "optional":
+				isOptional = true
 			default:
 				panic(fmt.Errorf(`field %v.%s has unknown modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
 			}
@@ -215,6 +219,7 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 		Parse:     pickParser(fieldTyp),
 		Stringify: pickStringer(fieldTyp),
 		Source:    src,
+		Optional:  isOptional,
 	}
 	if fm.Parse == nil {
 		panic(fmt.Errorf("field %v.%v: don't know how to parse %v from a string", structTyp, field.Name, fieldTyp))
