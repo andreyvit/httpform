@@ -26,7 +26,7 @@ func (e *Error) Unwrap() error {
 func (e *Error) Error() string {
 	var buf strings.Builder
 	if e.code != 0 {
-		fmt.Fprintf(&buf, "HTTP %d", e.code)
+		fmt.Fprintf(&buf, "[%d]", e.code)
 	}
 	if e.message != "" {
 		if buf.Len() > 0 {
@@ -35,8 +35,10 @@ func (e *Error) Error() string {
 		buf.WriteString(e.message)
 	}
 	if e.cause != nil {
-		if buf.Len() > 0 {
+		if e.message != "" {
 			buf.WriteString(": ")
+		} else if buf.Len() > 0 {
+			buf.WriteByte(' ')
 		}
 		buf.WriteString(e.cause.Error())
 	}
