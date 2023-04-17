@@ -135,6 +135,18 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 			if err != nil {
 				return &Error{http.StatusBadRequest, "", err}
 			}
+		case headerSrc:
+			v := r.Header.Get(fm.name)
+			if v == "" {
+				if fm.Optional {
+					continue
+				}
+				return &Error{http.StatusBadRequest, fmt.Sprintf("missing header %s", fm.name), nil}
+			}
+			err := setField(destVal, fm, v)
+			if err != nil {
+				return &Error{http.StatusBadRequest, "", err}
+			}
 		case cookieSrc:
 			if cookies == nil {
 				cookies = make(map[string]*http.Cookie)
@@ -163,6 +175,8 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 			v = r.URL
 		case queryValuesSrc:
 			v = r.URL.Query()
+		case headersSrc:
+			v = r.Header
 		case methodSrc:
 			v = r.Method
 		case isSaveSrc:
@@ -237,14 +251,16 @@ const (
 	pathSrc
 	formSrc
 	cookieSrc
+	headerSrc
 	requestSrc // sources here and below are unnamed
 	urlSrc
 	queryValuesSrc
+	headersSrc
 	methodSrc
 	isSaveSrc
 )
 
-var _sources = []string{"none", "path", "form", "cookie", "request", "url", "query values"}
+var _sources = []string{"none", "path", "form", "cookie", "header", "request", "url", "query values", "headers", "method", "issave"}
 
 func (v source) String() string {
 	return _sources[v]

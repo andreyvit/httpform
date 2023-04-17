@@ -12,6 +12,7 @@ var (
 	requestType   = reflect.TypeOf((*http.Request)(nil))
 	urlType       = reflect.TypeOf((*url.URL)(nil))
 	urlValuesType = reflect.TypeOf((url.Values)(nil))
+	headersType   = reflect.TypeOf((http.Header)(nil))
 )
 
 type structMeta struct {
@@ -115,6 +116,8 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 		src = urlSrc
 	} else if fieldTyp == urlValuesType {
 		src = queryValuesSrc
+	} else if fieldTyp == headersType {
+		src = headersSrc
 	}
 
 	jsonTag, jsonPresent := field.Tag.Lookup("json")
@@ -158,6 +161,11 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 					panic(fmt.Errorf(`field %v.%s has conflicting modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
 				}
 				src = cookieSrc
+			case "header":
+				if src != noSrc {
+					panic(fmt.Errorf(`field %v.%s has conflicting modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
+				}
+				src = headerSrc
 			case "method":
 				if src != noSrc {
 					panic(fmt.Errorf(`field %v.%s has conflicting modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
