@@ -1,8 +1,10 @@
 package httpform
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -59,6 +61,8 @@ func (conf *Configuration) Decode(r *http.Request, pathParams any, dest any) err
 //
 // Warning: use LimitBody on request before calling DecodeVal to avoid out-of-memory DoS attacks.
 func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr reflect.Value) error {
+	defer r.Body.Close()
+
 	if destValPtr.Kind() != reflect.Ptr {
 		panic(fmt.Errorf("httpform: destination must be a pointer, got %v", destValPtr.Type()))
 	}
@@ -71,22 +75,33 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 
 	sm := conf.lookupStruct(destVal.Type())
 
+	var rawBody []byte
+	if sm.HasRawBody {
+		var err error
+		rawBody, err = io.ReadAll(r.Body)
+		if err != nil {
+			return &Error{400, "", err}
+		}
+		r.Body = io.NopCloser(bytes.NewReader(rawBody))
+	}
+
 	mtype := determineMIMEType(r)
 	switch mtype {
 	case jsonContentType:
 		if !conf.AllowJSON {
 			return &Error{http.StatusUnsupportedMediaType, "JSON input not allowed", nil}
 		}
-		defer r.Body.Close()
-		decoder := json.NewDecoder(r.Body)
+		if sm.HasForm {
+			decoder := json.NewDecoder(r.Body)
 
-		if conf.DisallowUnknownFields && (conf.AllowUnknownFieldsHeader == "" || !parseBoolDefault(r.Header.Get(conf.AllowUnknownFieldsHeader), false)) {
-			decoder.DisallowUnknownFields()
-		}
+			if conf.DisallowUnknownFields && (conf.AllowUnknownFieldsHeader == "" || !parseBoolDefault(r.Header.Get(conf.AllowUnknownFieldsHeader), false)) {
+				decoder.DisallowUnknownFields()
+			}
 
-		err := decoder.Decode(destValPtr.Interface())
-		if err != nil {
-			return &Error{http.StatusBadRequest, "JSON input", err}
+			err := decoder.Decode(destValPtr.Interface())
+			if err != nil {
+				return &Error{http.StatusBadRequest, "JSON input", err}
+			}
 		}
 
 		r.PostForm = make(url.Values) // prevent ParseForm from parsing body
@@ -181,6 +196,16 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 			v = r.Method
 		case isSaveSrc:
 			v = (r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch)
+		case rawBodySrc:
+			fv := destVal.Field(fm.fieldIdx)
+			if isBytes(fv) {
+				fv.Set(reflect.ValueOf(rawBody).Convert(fv.Type()))
+			} else if isString(fv) {
+				fv.Set(reflect.ValueOf(string(rawBody)).Convert(fv.Type()))
+			} else {
+				panic(fmt.Errorf("httpform: invalid type of rawbody param: %v", fv.Type()))
+			}
+			continue
 		default:
 			continue
 		}
@@ -258,9 +283,10 @@ const (
 	headersSrc
 	methodSrc
 	isSaveSrc
+	rawBodySrc
 )
 
-var _sources = []string{"none", "path", "form", "cookie", "header", "request", "url", "query values", "headers", "method", "issave"}
+var _sources = []string{"none", "path", "form", "cookie", "header", "request", "url", "query values", "headers", "method", "issave", "rawbody"}
 
 func (v source) String() string {
 	return _sources[v]

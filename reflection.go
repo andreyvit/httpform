@@ -18,6 +18,8 @@ var (
 type structMeta struct {
 	NamedFields   map[string]*fieldMeta
 	UnnamedFields []*fieldMeta
+	HasRawBody    bool
+	HasForm       bool
 }
 
 type specialMeta struct {
@@ -98,6 +100,11 @@ func (conf *Configuration) examineStruct(structTyp reflect.Type) *structMeta {
 			} else {
 				sm.UnnamedFields = append(sm.UnnamedFields, fm)
 			}
+			if fm.Source == rawBodySrc {
+				sm.HasRawBody = true
+			} else if fm.Source == formSrc {
+				sm.HasForm = true
+			}
 		}
 	}
 	return sm
@@ -176,6 +183,11 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 					panic(fmt.Errorf(`field %v.%s has conflicting modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
 				}
 				src = isSaveSrc
+			case "rawbody":
+				if src != noSrc {
+					panic(fmt.Errorf(`field %v.%s has conflicting modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
+				}
+				src = rawBodySrc
 			case "optional":
 				isOptional = true
 			default:
@@ -236,4 +248,12 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 		panic(fmt.Errorf("field %v.%v: don't know how to convert %v to a string", structTyp, field.Name, fieldTyp))
 	}
 	return fm
+}
+
+func isBytes(v reflect.Value) bool {
+	return v.Kind() == reflect.Slice && v.Type().Elem().Kind() == reflect.Uint8
+}
+
+func isString(v reflect.Value) bool {
+	return v.Kind() == reflect.String
 }
