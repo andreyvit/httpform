@@ -75,15 +75,19 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 
 	sm := conf.lookupStruct(destVal.Type())
 
+	body := func() io.Reader { return r.Body }
 	var rawBody []byte
-	if sm.HasRawBody {
+	if sm.HasRawBody || (sm.HasForm && sm.HasFullBody) {
 		var err error
 		rawBody, err = io.ReadAll(r.Body)
 		if err != nil {
 			return &Error{400, "", err}
 		}
 		r.Body = io.NopCloser(bytes.NewReader(rawBody))
+		body = func() io.Reader { return bytes.NewReader(rawBody) }
 	}
+
+	var fullBody any
 
 	mtype := determineMIMEType(r)
 	switch mtype {
@@ -92,13 +96,20 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 			return &Error{http.StatusUnsupportedMediaType, "JSON input not allowed", nil}
 		}
 		if sm.HasForm {
-			decoder := json.NewDecoder(r.Body)
+			decoder := json.NewDecoder(body())
 
 			if conf.DisallowUnknownFields && (conf.AllowUnknownFieldsHeader == "" || !parseBoolDefault(r.Header.Get(conf.AllowUnknownFieldsHeader), false)) {
 				decoder.DisallowUnknownFields()
 			}
 
 			err := decoder.Decode(destValPtr.Interface())
+			if err != nil {
+				return &Error{http.StatusBadRequest, "JSON input", err}
+			}
+		}
+		if sm.HasFullBody {
+			decoder := json.NewDecoder(body())
+			err := decoder.Decode(&fullBody)
 			if err != nil {
 				return &Error{http.StatusBadRequest, "JSON input", err}
 			}
@@ -206,6 +217,8 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 				panic(fmt.Errorf("httpform: invalid type of rawbody param: %v", fv.Type()))
 			}
 			continue
+		case fullBodySrc:
+			v = fullBody
 		default:
 			continue
 		}
@@ -284,9 +297,10 @@ const (
 	methodSrc
 	isSaveSrc
 	rawBodySrc
+	fullBodySrc
 )
 
-var _sources = []string{"none", "path", "form", "cookie", "header", "request", "url", "query values", "headers", "method", "issave", "rawbody"}
+var _sources = []string{"none", "path", "form", "cookie", "header", "request", "url", "query values", "headers", "method", "issave", "rawbody", "fullbody"}
 
 func (v source) String() string {
 	return _sources[v]

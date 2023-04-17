@@ -163,6 +163,28 @@ func TestDecode_raw_invalid(t *testing.T) {
 	eq(t, string(in.Body), `<"foo": "bar" }`)
 }
 
+func TestDecode_fullbody_solo(t *testing.T) {
+	var in struct {
+		Body any `form:",fullbody" json:"-"`
+	}
+	r := httptest.NewRequest("POST", "https://example.com/subdir/", strings.NewReader(`{ "foo": "bar" }`))
+	r.Header.Set("Content-Type", "application/json")
+	ok(t, Default.Decode(r, nil, &in))
+	deepEqual(t, in.Body, map[string]any{"foo": "bar"})
+}
+
+func TestDecode_fullbody_mixed(t *testing.T) {
+	var in struct {
+		Body any    `form:",fullbody" json:"-"`
+		Foo  string `json:"foo"`
+	}
+	r := httptest.NewRequest("POST", "https://example.com/subdir/", strings.NewReader(`{ "foo": "bar" }`))
+	r.Header.Set("Content-Type", "application/json")
+	ok(t, Default.Decode(r, nil, &in))
+	deepEqual(t, in.Body, map[string]any{"foo": "bar"})
+	eq(t, in.Foo, "bar")
+}
+
 func ok(t testing.TB, err error) {
 	if err != nil {
 		t.Helper()

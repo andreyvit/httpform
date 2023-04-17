@@ -19,6 +19,7 @@ type structMeta struct {
 	NamedFields   map[string]*fieldMeta
 	UnnamedFields []*fieldMeta
 	HasRawBody    bool
+	HasFullBody   bool
 	HasForm       bool
 }
 
@@ -72,7 +73,14 @@ func setField(structVal reflect.Value, fm *fieldMeta, rawValue string) error {
 
 func setFieldVal(structVal reflect.Value, fm *fieldMeta, val reflect.Value) {
 	fieldVal := structVal.Field(fm.fieldIdx)
-	fieldVal.Set(val)
+	fieldTyp := fieldVal.Type()
+	if !val.IsValid() {
+		val = reflect.Zero(fieldTyp)
+	}
+	if !val.CanConvert(fieldTyp) {
+		panic(fmt.Errorf("%s: cannot convert from %s to %s", fm.name, val.Type(), fieldTyp))
+	}
+	fieldVal.Set(val.Convert(fieldTyp))
 }
 
 func (conf *Configuration) lookupStruct(structTyp reflect.Type) *structMeta {
@@ -102,6 +110,8 @@ func (conf *Configuration) examineStruct(structTyp reflect.Type) *structMeta {
 			}
 			if fm.Source == rawBodySrc {
 				sm.HasRawBody = true
+			} else if fm.Source == fullBodySrc {
+				sm.HasFullBody = true
 			} else if fm.Source == formSrc {
 				sm.HasForm = true
 			}
@@ -188,6 +198,11 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 					panic(fmt.Errorf(`field %v.%s has conflicting modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
 				}
 				src = rawBodySrc
+			case "fullbody":
+				if src != noSrc {
+					panic(fmt.Errorf(`field %v.%s has conflicting modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
+				}
+				src = fullBodySrc
 			case "optional":
 				isOptional = true
 			default:
