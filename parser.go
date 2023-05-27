@@ -53,6 +53,22 @@ func pickParser(typ reflect.Type) ParserFunc {
 			}
 			return reflect.ValueOf(int(v)).Convert(typ), nil
 		}
+	case reflect.Int8:
+		return func(s string) (reflect.Value, error) {
+			v, err := strconv.ParseInt(s, 10, 8)
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			return reflect.ValueOf(int8(v)).Convert(typ), nil
+		}
+	case reflect.Int16:
+		return func(s string) (reflect.Value, error) {
+			v, err := strconv.ParseInt(s, 10, 16)
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			return reflect.ValueOf(int16(v)).Convert(typ), nil
+		}
 	case reflect.Int32:
 		return func(s string) (reflect.Value, error) {
 			v, err := strconv.ParseInt(s, 10, 32)
@@ -64,6 +80,54 @@ func pickParser(typ reflect.Type) ParserFunc {
 	case reflect.Int64:
 		return func(s string) (reflect.Value, error) {
 			v, err := strconv.ParseInt(s, 10, 64)
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			return reflect.ValueOf(int64(v)).Convert(typ), nil
+		}
+	case reflect.Uint:
+		return func(s string) (reflect.Value, error) {
+			v, err := strconv.ParseUint(s, 10, 0)
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			return reflect.ValueOf(uint(v)).Convert(typ), nil
+		}
+	case reflect.Uintptr:
+		return func(s string) (reflect.Value, error) {
+			v, err := strconv.ParseUint(s, 10, 64)
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			return reflect.ValueOf(uintptr(v)).Convert(typ), nil
+		}
+	case reflect.Uint8:
+		return func(s string) (reflect.Value, error) {
+			v, err := strconv.ParseUint(s, 10, 8)
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			return reflect.ValueOf(uint8(v)).Convert(typ), nil
+		}
+	case reflect.Uint16:
+		return func(s string) (reflect.Value, error) {
+			v, err := strconv.ParseUint(s, 10, 16)
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			return reflect.ValueOf(uint16(v)).Convert(typ), nil
+		}
+	case reflect.Uint32:
+		return func(s string) (reflect.Value, error) {
+			v, err := strconv.ParseUint(s, 10, 32)
+			if err != nil {
+				return reflect.Value{}, err
+			}
+			return reflect.ValueOf(uint32(v)).Convert(typ), nil
+		}
+	case reflect.Uint64:
+		return func(s string) (reflect.Value, error) {
+			v, err := strconv.ParseUint(s, 10, 64)
 			if err != nil {
 				return reflect.Value{}, err
 			}
@@ -118,11 +182,11 @@ func pickStringer(typ reflect.Type) StringerFunc {
 		return func(v reflect.Value) (string, error) {
 			return strconv.FormatBool(v.Bool()), nil
 		}
-	case reflect.Int, reflect.Int32, reflect.Int64:
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return func(v reflect.Value) (string, error) {
 			return strconv.FormatInt(v.Int(), 10), nil
 		}
-	case reflect.Uint, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uintptr, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return func(v reflect.Value) (string, error) {
 			return strconv.FormatUint(v.Uint(), 10), nil
 		}
