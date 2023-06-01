@@ -63,6 +63,8 @@ func (conf *Configuration) Decode(r *http.Request, pathParams any, dest any) err
 func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr reflect.Value) error {
 	defer r.Body.Close()
 
+	isBodiless := (r.Method == http.MethodGet || r.Method == http.MethodHead)
+
 	if destValPtr.Kind() != reflect.Ptr {
 		panic(fmt.Errorf("httpform: destination must be a pointer, got %v", destValPtr.Type()))
 	}
@@ -90,6 +92,9 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 	var fullBody any
 
 	mtype := determineMIMEType(r)
+	if isBodiless {
+		mtype = ""
+	}
 	switch mtype {
 	case jsonContentType:
 		if !conf.AllowJSON {
