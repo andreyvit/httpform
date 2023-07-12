@@ -20,6 +20,8 @@ type Configuration struct {
 	AllowForm      bool
 	AllowMultipart bool
 
+	JSONBodyFallbackParam string
+
 	MaxMultipartMemory int64
 
 	DisallowUnknownFields    bool
@@ -32,6 +34,8 @@ var Default = &Configuration{
 	AllowJSON:      true,
 	AllowForm:      true,
 	AllowMultipart: true,
+
+	JSONBodyFallbackParam: "_body",
 
 	MaxMultipartMemory: 32 * MB, // matches http.defaultMaxMemory
 
@@ -95,11 +99,9 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 	if isBodiless {
 		mtype = ""
 	}
-	switch mtype {
-	case jsonContentType:
-		if !conf.AllowJSON {
-			return &Error{http.StatusUnsupportedMediaType, "JSON input not allowed", nil}
-		}
+
+	var isBodyParsed bool
+	parseJSONBody := func(body func() io.Reader) error {
 		if sm.HasForm {
 			decoder := json.NewDecoder(body())
 
@@ -118,6 +120,18 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 			if err != nil {
 				return &Error{http.StatusBadRequest, "JSON input", err}
 			}
+		}
+		isBodyParsed = true
+		return nil
+	}
+
+	switch mtype {
+	case jsonContentType:
+		if !conf.AllowJSON {
+			return &Error{http.StatusUnsupportedMediaType, "JSON input not allowed", nil}
+		}
+		if err := parseJSONBody(body); err != nil {
+			return err
 		}
 
 		r.PostForm = make(url.Values) // prevent ParseForm from parsing body
@@ -145,6 +159,16 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 			err := setVal(destVal, sm, formSrc, k, v)
 			if err != nil {
 				return &Error{http.StatusBadRequest, "", err}
+			}
+		}
+	}
+	if !isBodyParsed && conf.JSONBodyFallbackParam != "" {
+		bodyStr := r.Form.Get(conf.JSONBodyFallbackParam)
+		if bodyStr != "" {
+			// log.Printf("parsing fallback body:\n===\n%s\n===\n", bodyStr)
+			err := parseJSONBody(func() io.Reader { return strings.NewReader(bodyStr) })
+			if err != nil {
+				return err
 			}
 		}
 	}
