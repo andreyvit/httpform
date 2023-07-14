@@ -149,6 +149,21 @@ func pickParser(typ reflect.Type) ParserFunc {
 			}
 			return reflect.ValueOf((v)).Convert(typ), nil
 		}
+	case reflect.Pointer:
+		child := pickParser(typ.Elem())
+		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.Zero(typ), nil
+			}
+			v, err := child(s)
+			if err != nil {
+				return reflect.Value{}, err
+			}
+
+			pv := reflect.New(typ.Elem())
+			pv.Elem().Set(v)
+			return pv, err
+		}
 	default:
 		return nil
 	}
@@ -197,6 +212,14 @@ func pickStringer(typ reflect.Type) StringerFunc {
 	case reflect.Float64:
 		return func(v reflect.Value) (string, error) {
 			return strconv.FormatFloat(v.Float(), 'g', -1, 64), nil
+		}
+	case reflect.Pointer:
+		child := pickStringer(typ.Elem())
+		return func(v reflect.Value) (string, error) {
+			if v.IsNil() {
+				return "", nil
+			}
+			return child(v.Elem())
 		}
 	default:
 		return nil
