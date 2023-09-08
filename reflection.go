@@ -20,7 +20,7 @@ type structMeta struct {
 	UnnamedFields []*fieldMeta
 	HasRawBody    bool
 	HasFullBody   bool
-	HasForm       bool
+	HasBodyForm   bool
 }
 
 type specialMeta struct {
@@ -35,6 +35,7 @@ type fieldMeta struct {
 	Stringify StringerFunc
 	Source    source
 	Optional  bool
+	NotInBody bool
 }
 
 func getVal(structVal reflect.Value, fm *fieldMeta) reflect.Value {
@@ -112,8 +113,8 @@ func (conf *Configuration) examineStruct(structTyp reflect.Type) *structMeta {
 				sm.HasRawBody = true
 			} else if fm.Source == fullBodySrc {
 				sm.HasFullBody = true
-			} else if fm.Source == formSrc {
-				sm.HasForm = true
+			} else if fm.Source == formSrc && !fm.NotInBody {
+				sm.HasBodyForm = true
 			}
 		}
 	}
@@ -154,8 +155,9 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 
 	formTag, formPresent := field.Tag.Lookup("form")
 	var (
-		formName   string
-		isOptional bool
+		formName    string
+		isOptional  bool
+		isNotInBody bool
 	)
 	if formPresent {
 		comps := strings.Split(formTag, ",")
@@ -203,6 +205,8 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 					panic(fmt.Errorf(`field %v.%s has conflicting modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
 				}
 				src = fullBodySrc
+			case "notinbody":
+				isNotInBody = true
 			case "optional":
 				isOptional = true
 			default:
@@ -255,6 +259,7 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 		Stringify: pickStringer(fieldTyp),
 		Source:    src,
 		Optional:  isOptional,
+		NotInBody: isNotInBody,
 	}
 	if fm.Parse == nil {
 		panic(fmt.Errorf("field %v.%v: don't know how to parse %v from a string", structTyp, field.Name, fieldTyp))

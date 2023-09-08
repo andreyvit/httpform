@@ -83,7 +83,7 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 
 	body := func() io.Reader { return r.Body }
 	var rawBody []byte
-	if sm.HasRawBody || (sm.HasForm && sm.HasFullBody) {
+	if sm.HasRawBody || (sm.HasBodyForm && sm.HasFullBody) {
 		var err error
 		rawBody, err = io.ReadAll(r.Body)
 		if err != nil {
@@ -102,7 +102,7 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 
 	var isBodyParsed bool
 	parseJSONBody := func(body func() io.Reader) error {
-		if sm.HasForm {
+		if sm.HasBodyForm {
 			decoder := json.NewDecoder(body())
 
 			if conf.DisallowUnknownFields && (conf.AllowUnknownFieldsHeader == "" || !parseBoolDefault(r.Header.Get(conf.AllowUnknownFieldsHeader), false)) {
