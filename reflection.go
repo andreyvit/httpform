@@ -158,6 +158,7 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 		formName    string
 		isOptional  bool
 		isNotInBody bool
+		ropt        fieldStringRepresenationOpts
 	)
 	if formPresent {
 		comps := strings.Split(formTag, ",")
@@ -255,8 +256,8 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 	fm := &fieldMeta{
 		fieldIdx:  fieldIdx,
 		name:      name,
-		Parse:     pickParser(fieldTyp),
-		Stringify: pickStringer(fieldTyp),
+		Parse:     pickParser(fieldTyp, ropt),
+		Stringify: pickStringer(fieldTyp, ropt),
 		Source:    src,
 		Optional:  isOptional,
 		NotInBody: isNotInBody,

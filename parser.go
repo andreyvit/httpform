@@ -4,6 +4,7 @@ import (
 	"encoding"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 type ParserFunc func(s string) (reflect.Value, error)
@@ -12,7 +13,11 @@ type StringerFunc func(v reflect.Value) (string, error)
 var textMarshaller = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
 var textUnmarshaller = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 
-func pickParser(typ reflect.Type) ParserFunc {
+type fieldStringRepresenationOpts struct {
+	sep rune
+}
+
+func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc {
 	if typ.AssignableTo(textUnmarshaller) {
 		return func(s string) (reflect.Value, error) {
 			v := reflect.New(typ).Elem()
@@ -149,8 +154,28 @@ func pickParser(typ reflect.Type) ParserFunc {
 			}
 			return reflect.ValueOf((v)).Convert(typ), nil
 		}
+	case reflect.Slice:
+		child := pickParser(typ.Elem(), fieldStringRepresenationOpts{})
+		// TODO: use ropt.sep
+		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.Zero(typ), nil
+			}
+
+			itemStrs := strings.Fields(s)
+			sliceVal := reflect.MakeSlice(typ, 0, len(itemStrs))
+			for _, itemStr := range itemStrs {
+				v, err := child(itemStr)
+				if err != nil {
+					return reflect.Value{}, err
+				}
+				sliceVal = reflect.Append(sliceVal, v)
+			}
+
+			return sliceVal, nil
+		}
 	case reflect.Pointer:
-		child := pickParser(typ.Elem())
+		child := pickParser(typ.Elem(), ropt)
 		return func(s string) (reflect.Value, error) {
 			if s == "" {
 				return reflect.Zero(typ), nil
@@ -169,7 +194,7 @@ func pickParser(typ reflect.Type) ParserFunc {
 	}
 }
 
-func pickStringer(typ reflect.Type) StringerFunc {
+func pickStringer(typ reflect.Type, ropt fieldStringRepresenationOpts) StringerFunc {
 	if typ.AssignableTo(textMarshaller) {
 		return func(v reflect.Value) (string, error) {
 			raw, err := v.Interface().(encoding.TextMarshaler).MarshalText()
@@ -213,8 +238,28 @@ func pickStringer(typ reflect.Type) StringerFunc {
 		return func(v reflect.Value) (string, error) {
 			return strconv.FormatFloat(v.Float(), 'g', -1, 64), nil
 		}
+	case reflect.Slice:
+		child := pickStringer(typ.Elem(), fieldStringRepresenationOpts{})
+		return func(v reflect.Value) (string, error) {
+			if v.IsNil() || v.Len() == 0 {
+				return "", nil
+			}
+			n := v.Len()
+			var buf strings.Builder
+			for i := 0; i < n; i++ {
+				if i > 0 {
+					buf.WriteRune(' ')
+				}
+				itemStr, err := child(v.Index(i))
+				if err != nil {
+					return "", err
+				}
+				buf.WriteString(itemStr)
+			}
+			return buf.String(), nil
+		}
 	case reflect.Pointer:
-		child := pickStringer(typ.Elem())
+		child := pickStringer(typ.Elem(), ropt)
 		return func(v reflect.Value) (string, error) {
 			if v.IsNil() {
 				return "", nil
