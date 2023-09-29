@@ -44,6 +44,9 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 		}
 	case reflect.Bool:
 		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.ValueOf(false).Convert(typ), nil
+			}
 			v, err := ParseBool(s)
 			if err != nil {
 				return reflect.Value{}, err
@@ -52,6 +55,9 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 		}
 	case reflect.Int:
 		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.ValueOf(0).Convert(typ), nil
+			}
 			v, err := strconv.ParseInt(s, 10, 0)
 			if err != nil {
 				return reflect.Value{}, err
@@ -60,6 +66,9 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 		}
 	case reflect.Int8:
 		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.ValueOf(0).Convert(typ), nil
+			}
 			v, err := strconv.ParseInt(s, 10, 8)
 			if err != nil {
 				return reflect.Value{}, err
@@ -68,6 +77,9 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 		}
 	case reflect.Int16:
 		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.ValueOf(0).Convert(typ), nil
+			}
 			v, err := strconv.ParseInt(s, 10, 16)
 			if err != nil {
 				return reflect.Value{}, err
@@ -76,6 +88,9 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 		}
 	case reflect.Int32:
 		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.ValueOf(0).Convert(typ), nil
+			}
 			v, err := strconv.ParseInt(s, 10, 32)
 			if err != nil {
 				return reflect.Value{}, err
@@ -84,6 +99,9 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 		}
 	case reflect.Int64:
 		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.ValueOf(0).Convert(typ), nil
+			}
 			v, err := strconv.ParseInt(s, 10, 64)
 			if err != nil {
 				return reflect.Value{}, err
@@ -92,6 +110,9 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 		}
 	case reflect.Uint:
 		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.ValueOf(0).Convert(typ), nil
+			}
 			v, err := strconv.ParseUint(s, 10, 0)
 			if err != nil {
 				return reflect.Value{}, err
@@ -100,6 +121,9 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 		}
 	case reflect.Uintptr:
 		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.ValueOf(0).Convert(typ), nil
+			}
 			v, err := strconv.ParseUint(s, 10, 64)
 			if err != nil {
 				return reflect.Value{}, err
@@ -108,6 +132,9 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 		}
 	case reflect.Uint8:
 		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.ValueOf(0).Convert(typ), nil
+			}
 			v, err := strconv.ParseUint(s, 10, 8)
 			if err != nil {
 				return reflect.Value{}, err
@@ -116,6 +143,9 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 		}
 	case reflect.Uint16:
 		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.ValueOf(0).Convert(typ), nil
+			}
 			v, err := strconv.ParseUint(s, 10, 16)
 			if err != nil {
 				return reflect.Value{}, err
@@ -124,6 +154,9 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 		}
 	case reflect.Uint32:
 		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.ValueOf(0).Convert(typ), nil
+			}
 			v, err := strconv.ParseUint(s, 10, 32)
 			if err != nil {
 				return reflect.Value{}, err
@@ -132,6 +165,9 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 		}
 	case reflect.Uint64:
 		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.ValueOf(0).Convert(typ), nil
+			}
 			v, err := strconv.ParseUint(s, 10, 64)
 			if err != nil {
 				return reflect.Value{}, err
@@ -140,6 +176,9 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 		}
 	case reflect.Float32:
 		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.ValueOf(0).Convert(typ), nil
+			}
 			v, err := strconv.ParseFloat(s, 32)
 			if err != nil {
 				return reflect.Value{}, err
@@ -148,6 +187,9 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 		}
 	case reflect.Float64:
 		return func(s string) (reflect.Value, error) {
+			if s == "" {
+				return reflect.ValueOf(0).Convert(typ), nil
+			}
 			v, err := strconv.ParseFloat(s, 64)
 			if err != nil {
 				return reflect.Value{}, err
