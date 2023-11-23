@@ -42,9 +42,11 @@ var Default = &Configuration{
 	DisallowUnknownFields: false,
 }
 
-func (conf Configuration) Clone() *Configuration {
+func (conf *Configuration) Clone() *Configuration {
+	clone := new(Configuration)
+	*clone = *conf
 	conf.structCache = sync.Map{}
-	return &conf
+	return clone
 }
 
 func (conf *Configuration) Strict() *Configuration {
