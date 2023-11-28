@@ -204,7 +204,7 @@ func pickParser(typ reflect.Type, ropt fieldStringRepresenationOpts) ParserFunc 
 				return reflect.Zero(typ), nil
 			}
 
-			itemStrs := strings.Fields(s)
+			itemStrs := fieldsSep(s, ropt.sep)
 			sliceVal := reflect.MakeSlice(typ, 0, len(itemStrs))
 			for _, itemStr := range itemStrs {
 				v, err := child(itemStr)
@@ -290,7 +290,7 @@ func pickStringer(typ reflect.Type, ropt fieldStringRepresenationOpts) StringerF
 			var buf strings.Builder
 			for i := 0; i < n; i++ {
 				if i > 0 {
-					buf.WriteRune(' ')
+					buf.WriteRune(ropt.sep)
 				}
 				itemStr, err := child(v.Index(i))
 				if err != nil {
@@ -310,5 +310,17 @@ func pickStringer(typ reflect.Type, ropt fieldStringRepresenationOpts) StringerF
 		}
 	default:
 		return nil
+	}
+}
+
+func fieldsSep(str string, sep rune) []string {
+	if sep == ' ' {
+		return strings.Fields(str)
+	} else {
+		items := strings.FieldsFunc(str, func(r rune) bool { return r == sep })
+		return filterInPlace(items, func(item string) (string, bool) {
+			item = strings.TrimSpace(item)
+			return item, item != ""
+		})
 	}
 }

@@ -49,3 +49,17 @@ func parseBoolDefault(str string, dflt bool) bool {
 		return dflt
 	}
 }
+
+func filterInPlace[S ~[]T, T any](slice S, filter func(item T) (T, bool)) S {
+	o := 0
+	for i, item := range slice {
+		item, add := filter(item)
+		if add {
+			if o != i {
+				slice[o] = item
+			}
+			o++
+		}
+	}
+	return slice[:o]
+}

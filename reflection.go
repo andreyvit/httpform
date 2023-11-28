@@ -29,13 +29,14 @@ type specialMeta struct {
 }
 
 type fieldMeta struct {
-	fieldIdx  int
-	name      string
-	Parse     ParserFunc
-	Stringify StringerFunc
-	Source    source
-	Optional  bool
-	NotInBody bool
+	fieldIdx   int
+	name       string
+	Parse      ParserFunc
+	Stringify  StringerFunc
+	Source     source
+	Optional   bool
+	NotInBody  bool
+	IsJSONOnly bool
 }
 
 func getVal(structVal reflect.Value, fm *fieldMeta) reflect.Value {
@@ -158,7 +159,8 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 		formName    string
 		isOptional  bool
 		isNotInBody bool
-		ropt        fieldStringRepresenationOpts
+		isJSONOnly  bool
+		ropt        = fieldStringRepresenationOpts{sep: ' '}
 	)
 	if formPresent {
 		comps := strings.Split(formTag, ",")
@@ -208,8 +210,16 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 				src = fullBodySrc
 			case "notinbody":
 				isNotInBody = true
+			case "jsononly":
+				isJSONOnly = true
 			case "optional":
 				isOptional = true
+			case "sep=comma":
+				ropt.sep = ','
+			case "sep=semicolon":
+				ropt.sep = ';'
+			case "sep=colon":
+				ropt.sep = ':'
 			default:
 				panic(fmt.Errorf(`field %v.%s has unknown modifier %q in form:%q tag`, structTyp, field.Name, mod, formTag))
 			}
@@ -254,18 +264,19 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 	}
 
 	fm := &fieldMeta{
-		fieldIdx:  fieldIdx,
-		name:      name,
-		Parse:     pickParser(fieldTyp, ropt),
-		Stringify: pickStringer(fieldTyp, ropt),
-		Source:    src,
-		Optional:  isOptional,
-		NotInBody: isNotInBody,
+		fieldIdx:   fieldIdx,
+		name:       name,
+		Parse:      pickParser(fieldTyp, ropt),
+		Stringify:  pickStringer(fieldTyp, ropt),
+		Source:     src,
+		Optional:   isOptional,
+		NotInBody:  isNotInBody,
+		IsJSONOnly: isJSONOnly,
 	}
-	if fm.Parse == nil {
+	if fm.Parse == nil && !isJSONOnly {
 		panic(fmt.Errorf("field %v.%v: don't know how to parse %v from a string", structTyp, field.Name, fieldTyp))
 	}
-	if fm.Stringify == nil {
+	if fm.Stringify == nil && !isJSONOnly {
 		panic(fmt.Errorf("field %v.%v: don't know how to convert %v to a string", structTyp, field.Name, fieldTyp))
 	}
 	return fm
