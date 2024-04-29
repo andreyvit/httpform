@@ -30,12 +30,12 @@ func LimitBody(w http.ResponseWriter, r *http.Request, maxSize int64) {
 	}
 }
 
-// ParseBool is similar to strconv.ParseBool, but recognizes on/off values that browsers send for checkboxes.
+// ParseBool is similar to strconv.ParseBool, but recognizes on/off values that browsers send for checkboxes, and yes/no.
 func ParseBool(str string) (bool, error) {
 	switch str {
-	case "1", "t", "T", "true", "TRUE", "True", "on", "ON", "On":
+	case "1", "t", "T", "y", "Y", "true", "TRUE", "True", "on", "ON", "On", "yes", "YES", "Yes":
 		return true, nil
-	case "0", "f", "F", "false", "FALSE", "False", "off", "OFF", "Off":
+	case "0", "f", "F", "n", "N", "false", "FALSE", "False", "off", "OFF", "Off", "no", "NO", "No":
 		return false, nil
 	}
 	return false, fmt.Errorf("invalid bool value %q", str)
