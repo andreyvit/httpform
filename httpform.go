@@ -239,7 +239,7 @@ func (conf *Configuration) DecodeVal(r *http.Request, pathParams any, destValPtr
 		case isSaveSrc:
 			v = (r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch)
 		case rawBodySrc:
-			fv := destVal.Field(fm.fieldIdx)
+			fv := destVal.FieldByIndex(fm.fieldIdx)
 			if isBytes(fv) {
 				fv.Set(reflect.ValueOf(rawBody).Convert(fv.Type()))
 			} else if isString(fv) {

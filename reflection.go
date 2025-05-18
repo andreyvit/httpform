@@ -29,7 +29,7 @@ type specialMeta struct {
 }
 
 type fieldMeta struct {
-	fieldIdx   int
+	fieldIdx   []int
 	name       string
 	Parse      ParserFunc
 	Stringify  StringerFunc
@@ -40,7 +40,7 @@ type fieldMeta struct {
 }
 
 func getVal(structVal reflect.Value, fm *fieldMeta) reflect.Value {
-	return structVal.Field(fm.fieldIdx)
+	return structVal.FieldByIndex(fm.fieldIdx)
 }
 
 func getString(structVal reflect.Value, fm *fieldMeta) string {
@@ -74,7 +74,7 @@ func setField(structVal reflect.Value, fm *fieldMeta, rawValue string) error {
 }
 
 func setFieldVal(structVal reflect.Value, fm *fieldMeta, val reflect.Value) {
-	fieldVal := structVal.Field(fm.fieldIdx)
+	fieldVal := structVal.FieldByIndex(fm.fieldIdx)
 	fieldTyp := fieldVal.Type()
 	if !val.IsValid() {
 		val = reflect.Zero(fieldTyp)
@@ -91,40 +91,48 @@ func (conf *Configuration) lookupStruct(structTyp reflect.Type) *structMeta {
 		return v.(*structMeta)
 	}
 
-	sm := conf.examineStruct(structTyp)
+	sm := conf.examineStruct(structTyp, nil)
 	conf.structCache.LoadOrStore(structTyp, sm)
 	return sm
 }
 
-func (conf *Configuration) examineStruct(structTyp reflect.Type) *structMeta {
-	n := structTyp.NumField()
+func (conf *Configuration) examineStruct(structTyp reflect.Type, prefixIdx []int) *structMeta {
 	sm := &structMeta{
 		NamedFields: make(map[string]*fieldMeta),
 	}
-	for i := 0; i < n; i++ {
-		field := structTyp.Field(i)
-		fm := conf.examineField(i, &field, structTyp)
-		if fm != nil {
-			if fm.Source.IsNamed() {
-				sm.NamedFields[fm.name] = fm
-			} else {
-				sm.UnnamedFields = append(sm.UnnamedFields, fm)
-			}
-			if fm.Source == rawBodySrc {
-				sm.HasRawBody = true
-			} else if fm.Source == fullBodySrc {
-				sm.HasFullBody = true
-			} else if fm.Source == formSrc && !fm.NotInBody {
-				sm.HasBodyForm = true
-			}
+	conf.examineStructFields(structTyp, prefixIdx, func(fm *fieldMeta) {
+		if fm.Source.IsNamed() {
+			sm.NamedFields[fm.name] = fm
+		} else {
+			sm.UnnamedFields = append(sm.UnnamedFields, fm)
 		}
-	}
+		if fm.Source == rawBodySrc {
+			sm.HasRawBody = true
+		} else if fm.Source == fullBodySrc {
+			sm.HasFullBody = true
+		} else if fm.Source == formSrc && !fm.NotInBody {
+			sm.HasBodyForm = true
+		}
+	})
 	return sm
 }
 
-func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField, structTyp reflect.Type) *fieldMeta {
+func (conf *Configuration) examineStructFields(structTyp reflect.Type, prefixIdx []int, emit func(fm *fieldMeta)) {
+	n := structTyp.NumField()
+	for i := 0; i < n; i++ {
+		field := structTyp.Field(i)
+
+		fieldIdx := make([]int, len(prefixIdx)+1)
+		copy(fieldIdx, prefixIdx)
+		fieldIdx[len(prefixIdx)] = i
+
+		conf.examineField(fieldIdx, &field, structTyp, emit)
+	}
+}
+
+func (conf *Configuration) examineField(fieldIdx []int, field *reflect.StructField, structTyp reflect.Type, emit func(fm *fieldMeta)) {
 	if !field.IsExported() {
-		return nil
+		return
 	}
 	fieldTyp := field.Type
 
@@ -166,7 +174,7 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 		comps := strings.Split(formTag, ",")
 		if n := comps[0]; n != "" {
 			if n == "-" {
-				return nil
+				return
 			}
 			formName = comps[0]
 		}
@@ -229,6 +237,11 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 		src = formSrc
 	}
 
+	if field.Anonymous && !formPresent && !jsonPresent {
+		conf.examineStructFields(field.Type, fieldIdx, emit)
+		return
+	}
+
 	if src.IsNamed() && !formPresent && !jsonPresent {
 		panic(fmt.Errorf(`field %v.%s must have form:"..." or json:"..." tag; use json:"-" to skip`, structTyp, field.Name))
 	}
@@ -241,10 +254,11 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 		if formName != "" {
 			panic(fmt.Errorf(`field %v.%s is sourced from %v and cannot have a name in form:%q tag`, structTyp, field.Name, src, formTag))
 		}
-		return &fieldMeta{
+		emit(&fieldMeta{
 			fieldIdx: fieldIdx,
 			Source:   src,
-		}
+		})
+		return
 	}
 
 	var name string
@@ -279,7 +293,7 @@ func (conf *Configuration) examineField(fieldIdx int, field *reflect.StructField
 	if fm.Stringify == nil && !isJSONOnly {
 		panic(fmt.Errorf("field %v.%v: don't know how to convert %v to a string", structTyp, field.Name, fieldTyp))
 	}
-	return fm
+	emit(fm)
 }
 
 func isBytes(v reflect.Value) bool {

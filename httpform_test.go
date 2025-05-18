@@ -18,6 +18,18 @@ func TestDecode_query_string(t *testing.T) {
 	eq(t, in.Foo, "bar")
 }
 
+func TestDecode_embedded(t *testing.T) {
+	type Inner struct {
+		Foo string `json:"foo"`
+	}
+	var in struct {
+		Inner
+	}
+	r := httptest.NewRequest("GET", "https://example.com/subdir/?foo=bar", nil)
+	ok(t, Default.Decode(r, nil, &in))
+	eq(t, in.Foo, "bar")
+}
+
 func TestDecode_query_int(t *testing.T) {
 	var in struct {
 		Foo int `json:"foo"`
